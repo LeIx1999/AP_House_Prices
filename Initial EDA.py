@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sn
+import statistics as st
 
 # Read in data
 housing = pd.read_csv("germany_housing_data_14.07.2020.csv")
@@ -34,7 +35,10 @@ NAS = NAS.sort_values("Nas", ascending=False)
 
 # Plot Nas
 NAS.plot(kind = "bar")
-#plt.show()
+plt.show()
+
+# Remove all variables with more that 40% of missing values
+housing = housing.drop(columns = NAS[NAS.Nas >= 0.4].index)
 
 # Analyse price
 # Histogram of
@@ -50,6 +54,7 @@ price_box = plt.boxplot(housing.Price)
 
 # Remove outliers !?
 outliers = price_box["fliers"][0].get_data()[1]
+# ~everything but
 housing = housing[~housing.Price.isin(outliers)]
 
 # Correlations with price
@@ -65,20 +70,27 @@ print(housing.columns)
 # Not to much correlation going on
 
 # Look at living space a obvious correlation
-var_num = "Living_space"
-housing.plot.scatter(x = var_num, y = "Price", xlim = ((0, 1500)))
-
+num_value = "Living_space"
+housing.plot.scatter(x = num_value, y = "Price", xlim = ((0, 1500)))
+plt.title(f'Correlation of {num_value}')
 plt.show()
 
 # Look at the categorical features
 var_cat = "Type"
 
-order = housing.groupby("Type").Price.mean().sort_values().to_frame("Price").index
+# order = housing.groupby("Type").Price.mode().sort_values().to_frame("Price").index
+# Loop through the features
+for element in housing.loc[:, housing.dtypes.eq("object")].columns:
+    order = housing.groupby(element)["Price"].agg(st.median).sort_values().to_frame("Price").index
+    sn.boxplot(x = element, y = "Price", data = housing, order = order)
+    plt.title(f'Analysis of {element}')
+    plt.show()
 
-sn.boxplot(x = var_cat, y = "Price", data = housing, order = order)
-plt.show()
+# Remove categorical features without much effect
+housing = housing.drop(columns = ["Energy_certificate", "Energy_certificate_type", "Garagetype"])
 
-
+# Write result as csv
+housing.to_csv("housing_after_IEDA.csv")
 
 
 
