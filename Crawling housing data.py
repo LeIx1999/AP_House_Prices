@@ -15,7 +15,7 @@ cities = cities[cities["Satz-art"] == "40"]
 
 # Prepare for crawler
 cities = list(cities["Gemeindename"].str.split(",").str[0])
-cities = cities[:100]
+cities = cities[201:]
 
 # Call crawler function on citys
 housing_data_list = [get_housing_data(city, 5) for city in cities]
@@ -27,7 +27,7 @@ housing_data["Price"] = housing_data["Price"].apply(lambda x: x.replace("€", "
 housing_data["square-meters"] = housing_data["square-meters"].apply(lambda x: x.replace("m²", "").replace(".", "").replace(",", "."))
 
 # Excel
-housing_data.to_excel("housing_data.xlsx")
+housing_data.to_excel("housing_data3.xlsx")
 
 
 
