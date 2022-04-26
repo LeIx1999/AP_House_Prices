@@ -33,26 +33,53 @@ for index, row in housing_data.iterrows():
                     "lng": 0}
     coord_list.append(response)
 
+# create columns lat and lon
 housing_data["lat"] = [appartement["lat"] for appartement in coord_list]
 housing_data["lon"] = [appartement["lng"] for appartement in coord_list]
 
 # saving as xlsx.
-housing_data.to_excel("housing_data_cord1xlsx")
+housing_data.to_excel("data/housing_data_cord1.xlsx")
 
 # read in xlsx
-housing_data = pd.read_excel("housing_data_cord.xlsx")
+housing_data = pd.read_excel("data/housing_data_cord.xlsx")
 
 # read in shapefile data
-gemeinde_data = gpd.read_file("vg250_01-01.gk3.shape.ebenen/vg250_ebenen_0101/VG250_GEM.shp")
+gemeinde_data = gpd.read_file("data/vg250_01-01.gk3.shape.ebenen/vg250_ebenen_0101/VG250_GEM.shp")
+
+# set the crs (coordinate reference system)
+gemeinde_data = gemeinde_data.to_crs("EPSG:4326")
 
 # get gemeinde key from shapefile data
 gem_key = []
+
+# iterate through coordinates and get gemeinde key
 for index, row in housing_data.iterrows():
-    cord_point = Point(row.lat, row.long)
+    cord_point = Point(row.lon, row.lat)
     bool_list = gemeinde_data.contains(cord_point)
+    try:
+        bool_index = bool_list[bool_list == True].index.values[0]
+        gem_key.append(gemeinde_data["AGS"][bool_index])
+    except:
+        gem_key.append("")
 
-    bool_index = bool_list.index(True)
-    gem_key.append(gemeinde_data["AGS"][bool_index])
+housing_data["gem_20"] = gem_key
 
+# load regiostar data
+regiostar = pd.read_excel("data/regiostar-referenzdateien.xlsx", sheet_name = "ReferenzGebietsstand2020")
+
+# add leading zero to key
+regiostar["gem_20"] = [f"0{str(x)}" for x in regiostar["gem_20"]]
+
+
+# join regiostar
+housing_data = pd.merge(housing_data, regiostar.loc[:, ["gem_20", "RegioStaR7"]], how = "left", on = "gem_20")
+
+housing_data["RegioStaR7"] = housing_data["RegioStaR7"].replace({71: "Metropole",
+                                                                 72: "Regiopole",
+                                                                 73: "Großstadt",
+                                                                 74: "Zentrale Stadt",
+                                                                 75: "Mittelstadt",
+                                                                 76: "Städtischer Raum",
+                                                                 77: "Kleinstädtischer, dörflicher Raum"})
 
 
