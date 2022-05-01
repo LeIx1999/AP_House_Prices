@@ -4,6 +4,7 @@ import requests
 import geopandas as gpd
 from shapely.geometry import Polygon, LineString, Point
 import requests
+from numpy import nan
 
 # settings for printing in console
 width = 320
@@ -94,8 +95,37 @@ bev_data = bev_data[~bev_data["Bev_Insgesamt"].isna()]
 
 housing_data = pd.merge(housing_data, bev_data[["gem_20", "Fläche km2 ", "Bev_Insgesamt"]], how = "left", left_on = "gemrs_20", right_on = "gem_20")
 
+# Rename
+housing_data = housing_data.rename(columns= {"Fläche km2 ": "gem_size_km2",
+                                             "Bev_Insgesamt": "gem_population",
+                                             "Description": "description",
+                                             "Price": "price",
+                                             "RegioStarR7": "regioStarR7"})
+
+housing_data = housing_data.drop(columns=["gem_20", "gemrs_20"])
+
 # remove duplicates
-housing_data = housing_data.drop_duplicates(subset = ["Description", "Price", "address", "square-meters"])
+housing_data = housing_data.drop_duplicates(subset = ["description", "price", "address", "square-meters"])
 
 # add a few variables
-housing_data["Balkon"] = ["Balkon" in x for x in housing_data["information"]]
+housing_data["balcony"] = ["Balkon" in x or "balkon" in x for x in housing_data["information"]]
+
+housing_data["floor"] = [x[x.find("Geschoss") - 3:x.find("Geschoss")-2] for x in housing_data["information"]]
+
+# Erdgeschoss
+floor = []
+for index, row in housing_data.iterrows():
+    if row["floor"].isnumeric():
+        floor.append(row["floor"])
+    else:
+        floor.append("Erdgeschoss" in row["information"] or "erdgeschoss" in row["information"])
+
+housing_data["floor"] = floor
+
+# Ergeschoss = 0, missing = nan
+housing_data["floor"] = [nan if x == False else 0 if x == True else x for x in housing_data["floor"]]
+
+# no need for information and address anymore
+housing_data = housing_data.drop(columns=["information", "address"])
+
+housing_data.to_excel("data/housing.xlsx")
