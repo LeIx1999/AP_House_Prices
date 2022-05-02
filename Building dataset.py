@@ -67,8 +67,10 @@ housing_data["gemrs_20"] = gem_key
 # load regiostar data
 regiostar = pd.read_excel("data/regiostar-referenzdateien.xlsx", sheet_name = "ReferenzGebietsstand2020")
 
-# add leading zero to key
-regiostar["gemrs_20"] = [f"0{str(x)}" for x in regiostar["gemrs_20"]]
+regiostar["gemrs_20"] = regiostar.gemrs_20.astype("string")
+
+# remove leading zeros
+housing_data["gemrs_20"] = [x.lstrip("0") for x in housing_data["gemrs_20"]]
 
 
 # join regiostar
@@ -86,11 +88,14 @@ housing_data["RegioStaR7"] = housing_data["RegioStaR7"].replace({71: "Metropole"
 # clean df
 housing_data = housing_data.loc[:, "Description":]
 
+# fill to 12 digits
+housing_data["gemrs_20"] = [x.zfill(12) for x in housing_data["gemrs_20"]]
+
 # clean gemrs_20
 housing_data["gemrs_20"] = [x[0:9] for x in housing_data["gemrs_20"]]
 
 # Join Bevölkerung
-bev_data = pd.read_excel("data/Gemeindeverzeichnis 2020.xlsx", dtype = {"gem_20": np.object_})
+bev_data = pd.read_excel("data/Gemeindeverzeichnis 2020.xlsx", dtype = {"gem_20": str})
 bev_data = bev_data[~bev_data["Bev_Insgesamt"].isna()]
 
 housing_data = pd.merge(housing_data, bev_data[["gem_20", "Fläche km2 ", "Bev_Insgesamt"]], how = "left", left_on = "gemrs_20", right_on = "gem_20")
@@ -127,5 +132,9 @@ housing_data["floor"] = [nan if x == False else 0 if x == True else x for x in h
 
 # no need for information and address anymore
 housing_data = housing_data.drop(columns=["information", "address"])
+
+# clean price
+housing_data["price"] = [float(x) if any(char.isdigit() for char in x) else 0 for x in housing_data.price]
+housing_data = housing_data[housing_data["price"] >0]
 
 housing_data.to_excel("data/housing.xlsx")
