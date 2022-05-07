@@ -5,6 +5,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import statistics as st
 import matplotlib.ticker as mtick
+import folium
+from folium.plugins import MarkerCluster
+import branca
+import branca.colormap as cm
 
 # Read in data
 housing_data = pd.read_excel("data/housing.xlsx", index_col=0, decimal = ",")
@@ -61,7 +65,7 @@ housing_data = housing_data[housing_data["price"] <= extreme_outlier]
 # Function Histogramm
 def histo(var, xlabel, ylabel, title):
     plt.hist(var, density=True, bins=20, color="b", edgecolor="k")
-    plt.axvline(var.mean(), color="r", linestyle="dashed")
+    plt.axvline(var.median(), color="r", linestyle="dashed")
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.title(title)
@@ -112,7 +116,7 @@ histo(housing_data["gem_size_km2"], "Quadratmeter der Gemeinde", "Häufigkeit", 
 
 plt.subplot(3, 3, 5)
 # gem_population
-histo(housing_data["gem_population"], "Bevölkerung der Gemeinde", "Häufigkeit", "Histogramm Bevölerung der Gemeinde")
+histo(housing_data[housing_data["gem_population"] < 1000000]["gem_population"], "Bevölkerung der Gemeinde", "Häufigkeit", "Histogramm Bevölerung der Gemeinde")
 
 # balcony
 plt.subplot(3, 3, 6)
@@ -123,5 +127,47 @@ plt.subplot(3, 3, 7)
 bar(housing_data, "floor", "Geschoss", "Häufigkeit in Prozent", "Säulendiagramm Geschoss")
 
 
-# Plot lat long
+# Plot lat long with Folium and Leaflet
 # https://www.earthdatascience.org/tutorials/introduction-to-leaflet-animated-maps/
+germany_coords = [51.163361, 10.447683]
+
+# build map
+germany_map = folium.Map(location=germany_coords, zoom_start=7)
+
+# add flats
+for index, row in housing_data.iterrows():
+    folium.Marker(location=[row["lat"], row["lon"]]).add_to(germany_map)
+
+# save map
+germany_map.save("germany_map.html")
+
+# There are flats outside of germany
+# Remove those
+# bb of germany
+housing_data = housing_data[housing_data["lat"].between(47.3024876979, 54.983104153) &
+                            housing_data["lon"].between(5.98865807458, 15.0169958839)]
+
+
+# Price and lat lon
+# https://medium.com/analytics-vidhya/create-and-visualize-choropleth-map-with-folium-269d3fd12fa0
+# build map
+germany_map_price = folium.Map(location=germany_coords, zoom_start=7)
+
+# create color palette
+palette = cm.LinearColormap(colors=["yellow", "red"],
+                            vmin = housing_data.price.min(), vmax=housing_data.price.max())
+
+# add flats
+for index, row in housing_data.iterrows():
+    folium.CircleMarker(location=[row["lat"], row["lon"]], radius = 14,
+                  fill = True, color = palette(row["price"]), popup = str(row["price"])).add_to(germany_map_price)
+
+germany_map_price.add_child(palette)
+# save map
+germany_map_price.save("germany_map_price.html")
+
+# Fill missing values
+
+# Price and all other variables
+sns.pairplot(housing_data.loc[:, "price":], palette = "icefire", hue = "price", diag_kind = None)
+plt.draw()
