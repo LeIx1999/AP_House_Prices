@@ -15,6 +15,7 @@ housing_data = pd.read_excel("data/housing.xlsx", index_col=0, decimal = ",")
 housing_data["floor"] = housing_data["floor"].astype("string")
 
 
+
 # settings for printing in console
 width = 320
 pd.set_option("display.width", width)
@@ -75,6 +76,11 @@ def histo(var, xlabel, ylabel, title):
 # Histogram of price
 histo(housing_data.price, "Preis", "Häufigkeit", "Histogramm der abhängigen Variable Preis")
 
+# Remove outliers
+housing_data = housing_data[housing_data["square-meters"] <= 500]
+housing_data = housing_data[housing_data["rooms"] < "7"]
+housing_data = housing_data[~housing_data["rooms"].isin(["2.1", "23"])]
+
 # Verteilung aller erklärenden Variablen in einem Plot
 
 plt.style.use("default")
@@ -82,7 +88,7 @@ plt.style.use("default")
 plt.subplot(3, 3, 1)
 housing_data = housing_data[housing_data["square-meters"] != "kA"]
 housing_data["square-meters"] = housing_data["square-meters"].astype("float")
-histo(housing_data[housing_data["square-meters"] <= 500]["square-meters"], "Quadratmeter", "Häufigkeit", "Histogramm Quadratmeter")
+histo(housing_data["square-meters"], "Quadratmeter", "Häufigkeit", "Histogramm Quadratmeter")
 
 # function bar chart
 def bar(data, var,  xlabel, ylabel, title):
@@ -125,7 +131,7 @@ bar(housing_data, "balcony", "Balkon", "Häufigkeit in Prozent", "Säulendiagram
 # floor
 plt.subplot(3, 3, 7)
 bar(housing_data, "floor", "Geschoss", "Häufigkeit in Prozent", "Säulendiagramm Geschoss")
-
+plt.subplots_adjust(wspace=0.35, hspace=0.35)
 
 # Plot lat long with Folium and Leaflet
 # https://www.earthdatascience.org/tutorials/introduction-to-leaflet-animated-maps/
@@ -169,5 +175,62 @@ germany_map_price.save("germany_map_price.html")
 # Fill missing values
 
 # Price and all other variables
-sns.pairplot(housing_data.loc[:, "price":], palette = "icefire", hue = "price", diag_kind = None)
-plt.draw()
+# sns.pairplot(housing_data.loc[:, "price":], palette = "icefire", hue = "price", diag_kind = None)
+# plt.draw()
+# scatter function
+def scatter_plot(data, var_x, var_y):
+    plt.scatter(x=var_x, y=var_y, data = data)
+    plt.xlabel(var_x)
+    plt.ylabel(var_y)
+    plt.title(f'Scatterplot {var_x} & {var_y}')
+    plt.tight_layout()
+
+# boxplot function
+def box(data, var_x, var_y):
+    order = data.groupby(var_x).median().sort_values(var_y)
+    sns.boxplot(x=var_x, y = var_y, order = order.index, data = data)
+    plt.xlabel(var_x)
+    plt.ylabel(var_y)
+    plt.title(f'Boxplot {var_x} & {var_y}')
+    plt.tight_layout()
+
+
+plt.style.use("default")
+# square-meters
+plt.subplot(3, 3, 1)
+scatter_plot(housing_data, "square-meters", "price")
+
+# rooms
+plt.subplot(3, 3, 2)
+box(housing_data, "rooms", "price")
+
+# lat
+plt.subplot(3, 3, 3)
+scatter_plot(housing_data, "lat", "price")
+
+# lon
+plt.subplot(3, 3, 4)
+scatter_plot(housing_data, "lon", "price")
+
+# RegiostaR7
+plt.subplot(3, 3, 5)
+box(housing_data, "RegioStaR7", "price")
+
+# gem_size_km2
+plt.subplot(3, 3, 6)
+scatter_plot(housing_data, "gem_size_km2", "price")
+
+# gem_population
+plt.subplot(3, 3, 7)
+scatter_plot(housing_data, "gem_population", "price")
+
+# balcony
+plt.subplot(3, 3, 8)
+box(housing_data, "balcony", "price")
+
+# floor
+plt.subplot(3, 3, 9)
+box(housing_data, "floor", "price")
+plt.subplots_adjust(wspace=0.35, hspace=0.35)
+
+
