@@ -13,7 +13,9 @@ import branca.colormap as cm
 # Read in data
 housing_data = pd.read_excel("data/housing.xlsx", index_col=0, decimal = ",")
 housing_data["floor"] = housing_data["floor"].astype("string")
-
+housing_data = housing_data[housing_data["square-meters"] != "kA"]
+housing_data["square-meters"] = housing_data["square-meters"].astype("float64")
+housing_data = housing_data[housing_data["rooms"] != "k.A."]
 
 
 # settings for printing in console
@@ -56,12 +58,14 @@ plt.xlabel("Wohnungspreis")
 plt.title("Boxplot der Wohnungspreise")
 plt.show()
 
-# Remove extreme outliers
+# Remove extreme outliers and nans
+housing_data = housing_data[~housing_data["price"].isnull()]
 per25, per75 = np.percentile(housing_data.price, [25, 75])
 extreme_outlier = (per75 - per25) * 3 + per75
 outliers = price_boxplot["fliers"][0].get_data()[1]
 
 housing_data = housing_data[housing_data["price"] <= extreme_outlier]
+
 
 # Function Histogramm
 def histo(var, xlabel, ylabel, title):
@@ -79,7 +83,6 @@ histo(housing_data.price, "Preis", "Häufigkeit", "Histogramm der abhängigen Va
 # Remove outliers
 housing_data = housing_data[housing_data["square-meters"] <= 500]
 housing_data = housing_data[housing_data["rooms"] < "7"]
-housing_data = housing_data[~housing_data["rooms"].isin(["2.1", "23"])]
 
 # Verteilung aller erklärenden Variablen in einem Plot
 
@@ -233,4 +236,4 @@ plt.subplot(3, 3, 9)
 box(housing_data, "floor", "price")
 plt.subplots_adjust(wspace=0.35, hspace=0.35)
 
-
+housing_data.to_excel("data/housing_data_prepped.xlsx")
