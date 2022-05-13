@@ -10,12 +10,9 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import mean_squared_error
 
 housing_data = pd.read_excel("data/housing_data_prepped.xlsx", index_col=0, decimal = ",")
-housing_data = housing_data[~housing_data["description"].isnull()]
 
-# Encode RegioStaR7 and Description
-encoder = LabelEncoder()
-housing_data["RegioStaR7"] = encoder.fit_transform(housing_data["RegioStaR7"])
 
+# Encode Description
 tfidf_vectorizer = TfidfVectorizer()
 tfidf_vectorizer.fit_transform(housing_data["description"])
 housing_data = housing_data.drop(columns = "description")
@@ -23,6 +20,7 @@ housing_data = housing_data.drop(columns = "description")
 housing_data = housing_data.dropna()
 
 # train and test split
+housing_data = housing_data.drop(columns="description")
 housing_train, housing_test = train_test_split(housing_data,
                                                test_size=0.33,
                                                random_state=3)

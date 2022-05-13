@@ -9,7 +9,10 @@ import folium
 from folium.plugins import MarkerCluster
 import branca
 import branca.colormap as cm
-
+from matplotlib.ticker import PercentFormatter
+from sklearn.preprocessing import LabelEncoder
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
 # Read in data
 housing_data = pd.read_excel("data/housing.xlsx", index_col=0, decimal = ",")
 housing_data["floor"] = housing_data["floor"].astype("string")
@@ -31,110 +34,97 @@ housing_data.info()
 
 print(housing_data.describe())
 
-# Are there missing values?
-# NAs
-NAS = housing_data.isna().sum().to_frame("Nas")
-NAS = pd.DataFrame({"variable": NAS.index, "percentage": NAS.Nas / len(housing_data)})
-NAS = NAS[NAS["percentage"] >0]
-NAS = NAS.sort_values("percentage", ascending=False).reset_index()
-
-# Plot NAs
-NAS_plot= sns.barplot(x = "variable", y = "percentage", data = NAS)
-for index, value in enumerate(NAS.percentage):
-    plt.text(index, value,
-             f"{value:.1%}", ha = "center")
-plt.xlabel("Variablen")
-plt.ylabel("Fehlende Werte in Prozent")
-plt.title("Fehlende Werte pro Variable in Prozent")
-NAS_plot.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1, decimals=None, symbol='%', is_latex=False))
-plt.tick_params(axis = "x", rotation = 45)
-plt.tight_layout()
-plt.show()
 
 # Analyse price
 # Outlier?
 price_boxplot = plt.boxplot(housing_data.price)
-plt.xlabel("Wohnungspreis")
-plt.title("Boxplot der Wohnungspreise")
+plt.xlabel("price")
+plt.title("Boxplot price")
 plt.show()
 
-# Remove extreme outliers and nans
+# Remove outliers and nans
 housing_data = housing_data[~housing_data["price"].isnull()]
 per25, per75 = np.percentile(housing_data.price, [25, 75])
-extreme_outlier = (per75 - per25) * 3 + per75
-outliers = price_boxplot["fliers"][0].get_data()[1]
+outlier = (per75 - per25) * 1.5 + per75
 
-housing_data = housing_data[housing_data["price"] <= extreme_outlier]
+housing_data = housing_data[housing_data["price"] <= outlier]
 
 
 # Function Histogramm
-def histo(var, xlabel, ylabel, title):
-    plt.hist(var, density=True, bins=20, color="b", edgecolor="k")
-    plt.axvline(var.median(), color="r", linestyle="dashed")
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.title(title)
+def histo(data, var):
+    plt.hist(data[var], bins=20, color="b", edgecolor="k", weights=np.ones(len(data[var])) / len(data[var]))
+    plt.gca().yaxis.set_major_formatter(PercentFormatter(1))
+    plt.axvline(data[var].median(), color="r", linestyle="dashed")
+    plt.xlabel(var)
+    plt.ylabel("Count %")
+    plt.title(f'Histogram {var}')
+    plt.tick_params(axis="x", rotation=45)
     plt.tight_layout()
     plt.show()
 
 # Histogram of price
-histo(housing_data.price, "Preis", "Häufigkeit", "Histogramm der abhängigen Variable Preis")
+histo(housing_data, "price")
 
-# Remove outliers
+# Remove obvious outliers and clean data
 housing_data = housing_data[housing_data["square-meters"] <= 500]
 housing_data = housing_data[housing_data["rooms"] < "7"]
+encoder = LabelEncoder()
+housing_data["RegioStaR7"] = encoder.fit_transform(housing_data["RegioStaR7"])
+
 
 # Verteilung aller erklärenden Variablen in einem Plot
-
 plt.style.use("default")
 # square-meters
 plt.subplot(3, 3, 1)
 housing_data = housing_data[housing_data["square-meters"] != "kA"]
 housing_data["square-meters"] = housing_data["square-meters"].astype("float")
-histo(housing_data["square-meters"], "Quadratmeter", "Häufigkeit", "Histogramm Quadratmeter")
+histo(housing_data, "square-meters")
 
 # function bar chart
-def bar(data, var,  xlabel, ylabel, title):
+def bar(data, var):
     df = data.groupby(var)[var].count().to_frame()
     df = pd.DataFrame({"value": df.index, "percentage": df[var] / len(data)})
     df = df[df["percentage"] >= 0.001]
     df = df.sort_values("percentage", ascending=False).reset_index()
+    df["value"] = df["value"].astype("string")
+    df = df[df["percentage"] >= 0.01]
 
     df_plot = sns.barplot(x="value", y="percentage", data=df)
     for index, value in enumerate(df.percentage):
         plt.text(index, value,
                  f"{value:.1%}", ha="center")
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.title(title)
+    plt.xlabel(var)
+    plt.ylabel("Count %")
+    plt.title(f'Barchart {var}')
     df_plot.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1, decimals=None, symbol='%', is_latex=False))
     plt.tick_params(axis="x", rotation=45)
     plt.tight_layout()
 
 # rooms
 plt.subplot(3, 3, 2)
-bar(housing_data, "rooms", "Räume", "Häufigkeit in Prozent", "Säulendiagramm Räume")
+bar(housing_data, "rooms")
 
 # RegioStaR7
 plt.subplot(3, 3, 3)
-bar(housing_data, "RegioStaR7", "RegioStaR7", "Häufigkeit in Prozent", "Säulendiagramm RegioStaR7")
+bar(housing_data, "RegioStaR7")
 
 plt.subplot(3, 3, 4)
 # gem_size_km2
-histo(housing_data["gem_size_km2"], "Quadratmeter der Gemeinde", "Häufigkeit", "Histogramm Quadratmeter der Gemeinde")
+histo(housing_data, "gem_size_km2")
 
 plt.subplot(3, 3, 5)
 # gem_population
-histo(housing_data[housing_data["gem_population"] < 1000000]["gem_population"], "Bevölkerung der Gemeinde", "Häufigkeit", "Histogramm Bevölerung der Gemeinde")
+histo(housing_data[housing_data["gem_population"] < 1000000], "gem_population")
 
 # balcony
 plt.subplot(3, 3, 6)
-bar(housing_data, "balcony", "Balkon", "Häufigkeit in Prozent", "Säulendiagramm Balkon")
+bar(housing_data, "balcony")
 
 # floor
 plt.subplot(3, 3, 7)
-bar(housing_data, "floor", "Geschoss", "Häufigkeit in Prozent", "Säulendiagramm Geschoss")
+bar(housing_data, "floor")
 plt.subplots_adjust(wspace=0.35, hspace=0.35)
+plt.suptitle("Distribution variables")
 
 # Plot lat long with Folium and Leaflet
 # https://www.earthdatascience.org/tutorials/introduction-to-leaflet-animated-maps/
@@ -177,9 +167,40 @@ germany_map_price.save("germany_map_price.html")
 
 # Fill missing values
 
+# Are there missing values?
+# NAs
+NAS = housing_data.isna().sum().to_frame("Nas")
+NAS = pd.DataFrame({"variable": NAS.index, "percentage": NAS.Nas / len(housing_data)})
+NAS = NAS[NAS["percentage"] >0]
+NAS = NAS.sort_values("percentage", ascending=False).reset_index()
+
+# Plot NAs
+NAS_plot= sns.barplot(x = "variable", y = "percentage", data = NAS)
+for index, value in enumerate(NAS.percentage):
+    plt.text(index, value,
+             f"{value:.1%}", ha = "center")
+plt.xlabel("Variablen")
+plt.ylabel("Fehlende Werte in Prozent")
+plt.title("Fehlende Werte pro Variable in Prozent")
+NAS_plot.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1, decimals=None, symbol='%', is_latex=False))
+plt.tick_params(axis = "x", rotation = 45)
+plt.tight_layout()
+plt.show()
+
+# Remove the few description, gem_size_km2 and gem_population nas
+housing_data = housing_data[~housing_data["description"].isna()]
+housing_data = housing_data[~housing_data["gem_size_km2"].isna()]
+
+# There are too many nas in floor to remove all of them
+# Fill with median
+housing_data["floor"] = housing_data["floor"].astype("float")
+housing_data["floor"].fillna(housing_data["floor"].median(), inplace=True)
+
+# There are no nas left
+housing_data.info()
+
+# Understanding relationships
 # Price and all other variables
-# sns.pairplot(housing_data.loc[:, "price":], palette = "icefire", hue = "price", diag_kind = None)
-# plt.draw()
 # scatter function
 def scatter_plot(data, var_x, var_y):
     plt.scatter(x=var_x, y=var_y, data = data)
@@ -235,5 +256,15 @@ box(housing_data, "balcony", "price")
 plt.subplot(3, 3, 9)
 box(housing_data, "floor", "price")
 plt.subplots_adjust(wspace=0.35, hspace=0.35)
+plt.suptitle("Compare price to the other variables")
+
+housing_data.to_excel("data/housing_data_prepped.xlsx")
+
+# Encode description
+tfidf_vectorizer = TfidfVectorizer()
+description_vect = tfidf_vectorizer.fit_transform(housing_data["description"])
+
+# add to housing_data
+housing_data["encoded"] = pd.Series(list(description_vect.toarray()))
 
 housing_data.to_excel("data/housing_data_prepped.xlsx")
