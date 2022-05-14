@@ -1,4 +1,6 @@
 # Import packages
+import collections
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -123,8 +125,15 @@ bar(housing_data, "balcony")
 # floor
 plt.subplot(3, 3, 7)
 bar(housing_data, "floor")
+
+# des_length
+plt.subplot(3, 3, 8)
+histo(housing_data, "des_length")
+
 plt.subplots_adjust(wspace=0.35, hspace=0.35)
 plt.suptitle("Distribution variables")
+
+
 
 # Plot lat long with Folium and Leaflet
 # https://www.earthdatascience.org/tutorials/introduction-to-leaflet-animated-maps/
@@ -187,8 +196,7 @@ plt.tick_params(axis = "x", rotation = 45)
 plt.tight_layout()
 plt.show()
 
-# Remove the few description, gem_size_km2 and gem_population nas
-housing_data = housing_data[~housing_data["description"].isna()]
+# Remove the few gem_size_km2 and gem_population nas
 housing_data = housing_data[~housing_data["gem_size_km2"].isna()]
 
 # There are too many nas in floor to remove all of them
@@ -221,50 +229,47 @@ def box(data, var_x, var_y):
 
 plt.style.use("default")
 # square-meters
-plt.subplot(3, 3, 1)
+plt.subplot(4, 3, 1)
 scatter_plot(housing_data, "square-meters", "price")
 
 # rooms
-plt.subplot(3, 3, 2)
+plt.subplot(4, 3, 2)
 box(housing_data, "rooms", "price")
 
 # lat
-plt.subplot(3, 3, 3)
+plt.subplot(4, 3, 3)
 scatter_plot(housing_data, "lat", "price")
 
 # lon
-plt.subplot(3, 3, 4)
+plt.subplot(4, 3, 4)
 scatter_plot(housing_data, "lon", "price")
 
 # RegiostaR7
-plt.subplot(3, 3, 5)
+plt.subplot(4, 3, 5)
 box(housing_data, "RegioStaR7", "price")
 
 # gem_size_km2
-plt.subplot(3, 3, 6)
+plt.subplot(4, 3, 6)
 scatter_plot(housing_data, "gem_size_km2", "price")
 
 # gem_population
-plt.subplot(3, 3, 7)
+plt.subplot(4, 3, 7)
 scatter_plot(housing_data, "gem_population", "price")
 
 # balcony
-plt.subplot(3, 3, 8)
+plt.subplot(4, 3, 8)
 box(housing_data, "balcony", "price")
 
 # floor
-plt.subplot(3, 3, 9)
+plt.subplot(4, 3, 9)
 box(housing_data, "floor", "price")
+
+# des_length
+plt.subplot(4, 3, 10)
+scatter_plot(housing_data, "des_length", "price")
+
 plt.subplots_adjust(wspace=0.35, hspace=0.35)
 plt.suptitle("Compare price to the other variables")
 
 housing_data.to_excel("data/housing_data_prepped.xlsx")
 
-# Encode description
-tfidf_vectorizer = TfidfVectorizer()
-description_vect = tfidf_vectorizer.fit_transform(housing_data["description"])
-
-# add to housing_data
-housing_data["encoded"] = pd.Series(list(description_vect.toarray()))
-
-housing_data.to_excel("data/housing_data_prepped.xlsx")
