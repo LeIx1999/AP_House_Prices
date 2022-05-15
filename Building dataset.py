@@ -149,14 +149,5 @@ housing_data["des_length"] = [len(des.split()) for des in housing_data["descript
 
 housing_data = housing_data.drop(columns="description")
 
-# Most common words
-# nltk.download("stopwords")
-# des_string = " ".join([des for des in list(housing_data["description"])])
-# des_tokens = word_tokenize(des_string)
-# stopwords = stopwords.words("german")
-# des_tokens = [word for word in des_tokens if not word in stopwords]
-# word_counts = collections.Counter(des_tokens)
-
-
 
 housing_data.to_excel("data/housing.xlsx")

@@ -9,6 +9,23 @@ import time
 
 
 def get_housing_data(search_term, n_sites):
+    """
+    This function crawls information about apartments from immowelt.de.
+    The function uses a chromedriver to navigate the site and BeautifulSoup to pull data out of the HTML
+
+    Parameters
+    ----------
+    search_term : str
+        The term to search for on immowelt.de
+    n_sites : int
+        Number of result pages to go through for each search term
+
+    Returns
+    ----------
+    pandas DataFrame
+        A DataFrame with the apartments on the first n_sites result pages containing six columns
+        ("Description", "Price", "square-meters", "rooms", "address", "information")
+    """
     # Input city to lowercase
     search_term = search_term.lower()
 

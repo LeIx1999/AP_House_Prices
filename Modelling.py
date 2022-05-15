@@ -17,7 +17,7 @@ housing_data = pd.read_excel("data/housing_data_prepped.xlsx", index_col=0, deci
 
 # train and test split
 housing_train, housing_test = train_test_split(housing_data,
-                                               test_size=0.33,
+                                               test_size=0.2,
                                                random_state=3)
 
 # Random Forest with Cross Validation
@@ -27,7 +27,7 @@ housing_params = {"min_samples_split": [2, 3, 3, 4],
                   "max_samples": [0.5, 0.6, 0.7,  0.8],
                   "max_depth": [14, 16, 18, 20]}
 
-housing_CV = GridSearchCV(housing_DT, housing_params, cv = 5)
+housing_CV = GridSearchCV(housing_DT, housing_params, cv = 3)
 
 # create fit
 housing_CV.fit(housing_train.drop(columns="price"), housing_train["price"])
@@ -52,3 +52,15 @@ plt.tight_layout()
 housing_preds = housing_CV.predict(housing_test.drop(columns="price"))
 print(mean_squared_error(housing_test["price"], housing_preds, squared=False))
 print(mean_absolute_error(housing_test["price"], housing_preds))
+
+# Analyse predictions
+plt.scatter(housing_test["price"], housing_preds)
+plt.plot([housing_test["price"].min(), housing_test["price"].max()],
+         [housing_test["price"].min(), housing_test["price"].max()], "k--", lw=4)
+plt.xlabel('Price')
+plt.ylabel('Predicted price')
+plt.title("Actual price vs. predicted price")
+plt.show()
+
+housing_test.insert(1, "preds", housing_preds)
+housing_data.head()
